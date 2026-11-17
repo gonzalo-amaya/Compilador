@@ -1,0 +1,74 @@
+package parser;
+
+import java_cup.runtime.*;
+import java.util.*;
+import ast.AST.*;
+
+terminal INT, BOOL, VOID, MAIN, RETURN;
+terminal PLUS, TIMES, ASSIGN;
+terminal LPAREN, RPAREN, LBRACE, RBRACE, SEMI;
+terminal Integer NRO;
+terminal Boolean BOOL_CONST;
+terminal String ID;
+
+non terminal ProgramNode P;
+non terminal String TipoRetorno, Tipo;
+non terminal List<VarDeclNode> ListaDecl;
+non terminal VarDeclNode Decl;
+non terminal List<ASTNode> ListaSent;
+non terminal ASTNode Sent, E;
+
+precedence left PLUS;
+precedence left TIMES;
+
+start with P;
+
+P ::= TipoRetorno:tr MAIN LPAREN RPAREN LBRACE ListaDecl:decls ListaSent:sents RBRACE
+      {: RESULT = new ProgramNode(tr, decls, sents); :}
+    ;
+
+TipoRetorno ::= Tipo:t {: RESULT = t; :}
+| VOID   {: RESULT = "void"; :}
+;
+
+Tipo ::= INT  {: RESULT = "int"; :}
+| BOOL {: RESULT = "bool"; :}
+;
+
+ListaDecl ::= ListaDecl:list Decl:d
+{: list.add(d); RESULT = list; :}
+|
+{: RESULT = new ArrayList<>(); :}
+;
+
+Decl ::= Tipo:t ID:name SEMI
+{: RESULT = new VarDeclNode(t, name, tleft); :}
+;
+
+ListaSent ::= ListaSent:list Sent:s
+{: list.add(s); RESULT = list; :}
+|
+{: RESULT = new ArrayList<>(); :}
+;
+
+Sent ::= ID:name ASSIGN E:expr SEMI
+{: RESULT = new AssignNode(name, expr, nameleft); :}
+       | RETURN E:expr SEMI
+{: RESULT = new ReturnNode(expr, exprleft); :}
+       | RETURN SEMI
+{: RESULT = new ReturnNode(null, 0); :}
+;
+
+E ::= E:e1 PLUS E:e2
+{: RESULT = new BinOpNode("+", e1, e2, e1left); :}
+    | E:e1 TIMES E:e2
+{: RESULT = new BinOpNode("*", e1, e2, e1left); :}
+    | LPAREN E:e RPAREN
+{: RESULT = e; :}
+    | NRO:val
+{: RESULT = new IntLiteralNode(val); :}
+    | BOOL_CONST:val
+{: RESULT = new BoolLiteralNode(val); :}
+    | ID:name
+{: RESULT = new VarUseNode(name, nameleft); :}
+    ;
